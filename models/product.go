@@ -1,1 +1,1 @@
-package product
+package models
