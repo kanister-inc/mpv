@@ -8,7 +8,19 @@ function Profile() {
   // Фильтруем заказы: показываем только те, которые принадлежат текущему пользователю [п.5]
   const myOrders = orders.filter(order => order.userId === currentUser?.id);
 
-  if (!currentUser) return null; // Предохранитель, если юзер не залогинен
+  if (!currentUser) {
+      return (
+        <div className="text-center p-5 mt-5 card shadow-sm border-0 rounded-3 bg-white">
+          <div className="fs-1 mb-3">👤</div>
+          <h3 className="text-muted fw-bold">Вы не авторизованы</h3>
+          <p className="text-muted">Войдите в личный кабинет, чтобы просмотреть историю своих заказов.</p>
+          <Link to="/auth" className="btn btn-primary mt-3 px-4 py-2 fw-bold shadow-sm rounded-3">
+            Войти в аккаунт
+          </Link>
+        </div>
+      );
+    }
+
 
   return (
     <div className="row g-4 mt-2">

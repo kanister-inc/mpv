@@ -58,7 +58,8 @@ function App() {
           <Route path="/cart" element={<Cart />} />
           
           {/* Защита страниц: если не вошел — редирект на авторизацию [п.1] */}
-          <Route path="/profile" element={currentUser ? <Profile /> : <Navigate to="/auth" />} />
+          <Route path="/profile" element={<Profile />} />
+
           <Route path="/admin" element={currentUser && currentUser.role === 'admin' ? <Admin /> : <Navigate to="/" />} />
         </Routes>
       </div>
