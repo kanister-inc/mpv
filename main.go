@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"mpv/database" // Ваша база данных
-	"://github.com"
+	"/github.com"
 )
 
 func main() {
