@@ -1,6 +1,6 @@
 module mpv
 
-go 1.26.3
+go 1.26
 
 require (
 	github.com/jinzhu/inflection v1.0.0 // indirect
