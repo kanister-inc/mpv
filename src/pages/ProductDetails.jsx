@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 
@@ -6,19 +6,33 @@ function ProductDetails() {
   const { id } = useParams();
   const { products, addToCart, toggleFavorite, favorites, currentUser } = useData();
 
-  // Находим нужный товар по ID
   const product = products.find(p => p.id === parseInt(id));
 
-  // Локальное состояние для формы добавления нового отзыва
-  const [reviews, setReviews] = useState([
-    { id: 1, username: 'Алексей', rating: 5, comment: 'Отличный товар, полностью соответствует описанию!' },
-    { id: 2, username: 'Мария', rating: 4, comment: 'Хорошее качество, но доставка немного задержалась.' }
-  ]);
+  // 💬 ТЕПЕРЬ ЖИВЫЕ ОТЗЫВЫ: изначально массив пустой, данные тянем с бэка
+  const [reviews, setReviews] = useState([]);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
 
-  // Проверяем, находится ли данный товар в избранном
   const isFavorite = favorites.includes(product?.id);
+
+  // Загружаем отзывы для этого конкретного товара с Go-сервера
+  useEffect(() => {
+    if (!product) return;
+
+    const fetchReviews = async () => {
+      try {
+        const response = await fetch(`http://localhost:8080/api/reviews?productId=${product.id}`);
+        if (response.ok) {
+          const data = await response.json();
+          setReviews(data || []); // Сохраняем отзывы из базы в стейт
+        }
+      } catch (error) {
+        console.error('Ошибка при загрузке отзывов:', error);
+      }
+    };
+
+    fetchReviews();
+  }, [product]);
 
   if (!product) {
     return (
@@ -29,8 +43,8 @@ function ProductDetails() {
     );
   }
 
-  // Обработка отправки отзыва
-  const handleReviewSubmit = (e) => {
+  // Обработка отправки отзыва на бэкенд в SQLite
+  const handleReviewSubmit = async (e) => {
     e.preventDefault();
     if (!currentUser) {
       alert('Пожалуйста, войдите в аккаунт, чтобы оставить отзыв!');
@@ -38,19 +52,37 @@ function ProductDetails() {
     }
     if (!comment.trim()) return;
 
-    const newReview = {
-      id: Date.now(),
-      username: currentUser.name || 'Покупатель',
-      rating: rating,
-      comment: comment
-    };
+    try {
+      const response = await fetch('http://localhost:8080/api/reviews/add', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Id': String(currentUser.id),
+          'X-User-Role': currentUser.role
+        },
+        body: JSON.stringify({
+          productId: product.id,
+          username: currentUser.name || 'Покупатель',
+          rating: rating,
+          comment: comment
+        })
+      });
 
-    setReviews([newReview, ...reviews]);
-    setComment('');
-    setRating(5);
-    alert('Отзыв успешно добавлен!');
+      if (response.ok) {
+        const newReview = await response.json();
+        // Добавляем новый отзыв в начало списка, чтобы он сразу отобразился
+        setReviews([newReview, ...reviews]);
+        setComment('');
+        setRating(5);
+        alert('Отзыв успешно опубликован!');
+      } else {
+        alert('Не удалось сохранить отзыв на сервере.');
+      }
+    } catch (error) {
+      console.error('Ошибка при отправке отзыва:', error);
+      alert('Ошибка сети: бэкенд недоступен.');
+    }
   };
-
   return (
     <div className="container mt-4">
       {/* Карточка товара */}
@@ -70,7 +102,6 @@ function ProductDetails() {
                 {product.category === 'electronics' ? 'Электроника' : 'Одежда'}
               </span>
               
-              {/* 📦 Информация о наличии на складе */}
               {product.stock > 0 ? (
                 <span className="badge bg-success-subtle text-success px-3 py-2 fw-bold">
                   📦 В наличии: {product.stock} шт.
@@ -91,7 +122,6 @@ function ProductDetails() {
             </p>
             
             <div className="mt-4 pt-3 border-top d-flex gap-3 align-items-center">
-              {/* Кнопка добавления в корзину с блокировкой по складу */}
               <button 
                 className={`btn btn-lg px-5 fw-bold ${product.stock > 0 ? 'btn-primary' : 'btn-secondary'}`}
                 onClick={() => addToCart(product.id)}
@@ -100,7 +130,6 @@ function ProductDetails() {
                 {product.stock > 0 ? 'В корзину' : 'Закончился'}
               </button>
 
-              {/* ⭐ Кнопка Избранного (Сердечко) */}
               <button 
                 className={`btn btn-lg ${isFavorite ? 'btn-danger' : 'btn-outline-danger'}`}
                 onClick={() => toggleFavorite(product.id)}
@@ -117,7 +146,7 @@ function ProductDetails() {
         </div>
       </div>
 
-      {/* 💬 Блок отзывов и рейтингов */}
+      {/* 💬 Блок отзывов */}
       <div className="card p-4 shadow-sm border-0 rounded-3 mb-5">
         <h4 className="fw-bold mb-4">Отзывы покупателей 💬</h4>
 
@@ -154,18 +183,18 @@ function ProductDetails() {
           </button>
         </form>
 
-        {/* Список существующих отзывов */}
+        {/* Список отзывов из базы SQLite */}
         <div className="review-list">
           {reviews.length === 0 ? (
             <p className="text-muted text-center py-3">У этого товара пока нет отзывов. Станьте первым!</p>
           ) : (
             reviews.map(r => (
-              <div key={r.id} className="border-bottom py-3">
+              <div key={r.ID || r.id} className="border-bottom py-3">
                 <div className="d-flex justify-content-between align-items-center mb-1">
-                  <span className="fw-bold text-dark">{r.username}</span>
-                  <span className="text-warning fw-bold">{'⭐'.repeat(r.rating)}</span>
+                  <span className="fw-bold text-dark">{r.username || r.Username}</span>
+                  <span className="text-warning fw-bold">{'⭐'.repeat(r.rating || r.Rating)}</span>
                 </div>
-                <p className="text-muted mb-0 small" style={{ fontSize: '0.95rem' }}>{r.comment}</p>
+                <p className="text-muted mb-0 small" style={{ fontSize: '0.95rem' }}>{r.comment || r.Comment}</p>
               </div>
             ))
           )}

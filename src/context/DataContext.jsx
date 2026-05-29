@@ -9,7 +9,7 @@ export const DataProvider = ({ children }) => {
   const [cart, setCart] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [orders, setOrders] = useState([]);
-  const [favorites, setFavorites] = useState([]); // ⭐ НОВОЕ: состояние для списка избранного
+  const [favorites, setFavorites] = useState([]); // Состояние для списка избранного
   const [loading, setLoading] = useState(true);
 
   // 1. Загрузка товаров с учетом количества на складе и ID продавца
@@ -68,7 +68,6 @@ export const DataProvider = ({ children }) => {
       return { success: false, message: 'Нет связи с сервером.' };
     }
   };
-
   // 3. Авторизация 
   const loginUser = async (email, password) => {
     try {
@@ -93,6 +92,9 @@ export const DataProvider = ({ children }) => {
         localStorage.setItem('userId', String(user.id));
         localStorage.setItem('userRole', user.role);
         
+        // 🚀 ПОДТЯГИВАЕМ ЛАЙКИ ИЗ SQLite
+        fetchUserFavorites(user.id);
+        
         return { success: true };
       } else {
         return { success: false, message: 'Неверный Email или пароль' };
@@ -111,7 +113,7 @@ export const DataProvider = ({ children }) => {
     localStorage.removeItem('userRole');
   };
 
-  // 4. НОВОЕ: Создание товара продавца/админа в SQLite через Go
+  // 4. Создание товара продавца/админа в SQLite через Go
   const createProduct = async (productData) => {
     if (!currentUser || (currentUser.role !== 'seller' && currentUser.role !== 'admin')) {
       return { success: false, message: 'Недостаточно прав для добавления товара.' };
@@ -123,8 +125,8 @@ export const DataProvider = ({ children }) => {
       price: parseFloat(productData.price),
       category: productData.category,
       img: productData.img || '/images/default.jpg',
-      stock: parseInt(productData.stock) || 0, // Сохраняем остаток на складе
-      seller_id: currentUser.id // Привязываем товар к продавцу
+      stock: parseInt(productData.stock) || 0, 
+      seller_id: currentUser.id 
     };
 
     try {
@@ -161,7 +163,7 @@ export const DataProvider = ({ children }) => {
     }
   };
 
-  // 5. НОВОЕ: Удаление товара из SQLite через Go
+  // 5. Удаление товара из SQLite через Go
   const deleteProduct = async (productId) => {
     try {
       const response = await fetch(`${API_URL}/api/products/delete?id=${productId}`, {
@@ -182,7 +184,6 @@ export const DataProvider = ({ children }) => {
       return { success: false, message: 'Ошибка сети.' };
     }
   };
-
   // 6. Функции корзины с проверкой наличия товара на складе
   const addToCart = (productId) => {
     const product = products.find(p => p.id === productId);
@@ -191,7 +192,6 @@ export const DataProvider = ({ children }) => {
     setCart((prevCart) => {
       const existingItem = prevCart.find(item => item.id === productId);
       
-      // Проверяем, не пытаемся ли мы заказать больше, чем есть на складе
       const currentQty = existingItem ? existingItem.qty : 0;
       if (currentQty >= product.stock) {
         alert(`Нельзя добавить больше! На складе осталось всего: ${product.stock} шт.`);
@@ -219,19 +219,54 @@ export const DataProvider = ({ children }) => {
     setCart((prevCart) => prevCart.filter(item => item.id !== productId));
   };
 
-  // 7. Избранное (Favorites)
-  const toggleFavorite = (productId) => {
+  // ⭐ НОВОЕ: Загрузка сохраненных лайков из SQLite при входе на сайт
+  const fetchUserFavorites = async (userId) => {
+    try {
+      const response = await fetch(`${API_URL}/api/favorites`, {
+        headers: {
+          'X-User-Id': String(userId),
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setFavorites(data || []); 
+      }
+    } catch (error) {
+      console.error('Не удалось загрузить избранное:', error);
+    }
+  };
+
+  // ⭐ НОВОЕ: Живое переключение лайков через Go бэкенд
+  const toggleFavorite = async (productId) => {
     if (!currentUser) {
       alert('Пожалуйста, авторизуйтесь для добавления в избранное!');
       return;
     }
-    setFavorites((prevFavorites) => {
-      if (prevFavorites.includes(productId)) {
-        return prevFavorites.filter(id => id !== productId);
+
+    try {
+      const response = await fetch(`${API_URL}/api/favorites/toggle`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-User-Id': String(currentUser.id)
+        },
+        body: JSON.stringify({ productId: Number(productId) })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        if (data.status === 'added') {
+          setFavorites(prev => [...prev, productId]);
+        } else if (data.status === 'removed') {
+          setFavorites(prev => prev.filter(id => id !== productId));
+        }
       } else {
-        return [...prevFavorites, productId];
+        alert('Не удалось обновить статус избранного.');
       }
-    });
+    } catch (error) {
+      console.error('Ошибка сети при переключении избранного:', error);
+    }
   };
 
   const createOrder = () => {

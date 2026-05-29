@@ -14,4 +14,8 @@ func RegisterUserRoutes() {
 	http.HandleFunc("/api/user/ping", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("User router works!"))
 	})
+	// ⭐ Маршруты для Избранного (Favorites)
+	http.HandleFunc("/api/favorites/toggle", handlers.ToggleFavorite)
+	http.HandleFunc("/api/favorites", handlers.GetUserFavorites)
+
 }

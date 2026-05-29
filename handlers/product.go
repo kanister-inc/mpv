@@ -197,3 +197,75 @@ func GetProductReviews(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(reviews)
 }
+
+// ToggleFavorite — добавляет товар в избранное или удаляет его, если он уже там
+func ToggleFavorite(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Метод не поддерживается", http.StatusMethodNotAllowed)
+		return
+	}
+
+	userIDStr := r.Header.Get("X-User-Id")
+	if userIDStr == "" {
+		http.Error(w, "Авторизуйтесь, чтобы добавить в избранное", http.StatusUnauthorized)
+		return
+	}
+	userIDInt, _ := strconv.Atoi(userIDStr)
+	userID := uint(userIDInt)
+
+	var input struct {
+		ProductID uint `json:"productId"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		http.Error(w, "Некорректный JSON", http.StatusBadRequest)
+		return
+	}
+
+	var fav models.Favorite
+	// Ищем, есть ли уже этот товар в избранном у этого юзера
+	result := database.DB.Where("user_id = ? AND product_id = ?", userID, input.ProductID).First(&fav)
+
+	if result.Error == nil {
+		// Если нашли — удаляем («убираем лайк»)
+		database.DB.Delete(&fav)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{"status": "removed", "productId": input.ProductID})
+	} else {
+		// Если не нашли — создаем («ставим лайк»)
+		newFav := models.Favorite{
+			UserID:    userID,
+			ProductID: input.ProductID,
+		}
+		database.DB.Create(&newFav)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{"status": "added", "productId": input.ProductID})
+	}
+}
+
+// GetUserFavorites — возвращает массив ID всех избранных товаров текущего пользователя
+func GetUserFavorites(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Метод не поддерживается", http.StatusMethodNotAllowed)
+		return
+	}
+
+	userIDStr := r.Header.Get("X-User-Id")
+	if userIDStr == "" {
+		http.Error(w, "Пользователь не авторизован", http.StatusUnauthorized)
+		return
+	}
+	userIDInt, _ := strconv.Atoi(userIDStr)
+	userID := uint(userIDInt)
+
+	var favorites []models.Favorite
+	database.DB.Where("user_id = ?", userID).Find(&favorites)
+
+	// Собираем только массив ID товаров для удобства фронтенда [1, 3, 5...]
+	var productIDs []uint
+	for _, f := range favorites {
+		productIDs = append(productIDs, f.ProductID)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(productIDs)
+}
