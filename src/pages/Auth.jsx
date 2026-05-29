@@ -10,29 +10,39 @@ function Auth() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [role, setRole] = useState('customer'); // По умолчанию — обычный покупатель
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false); // Состояние отправки запроса
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
 
-    if (isLogin) {
-      // Логика Входа [п.1]
-      const res = loginUser(email, password);
-      if (res.success) {
-        navigate('/'); // Перекидываем на главную
+    try {
+      if (isLogin) {
+        // Логика Входа (теперь асинхронная)
+        const res = await loginUser(email, password);
+        if (res.success) {
+          navigate('/'); // Перенаправляем на главную страницу
+        } else {
+          setError(res.message);
+        }
       } else {
-        setError(res.message);
+        // Логика Регистрации (передаем выбранную роль на Go)
+        const res = await registerUser(fullName, email, password, role);
+        alert(res.message);
+        if (res.success) {
+          setIsLogin(true); // Переключаем на экран входа
+          setFullName('');
+          setPassword('');
+          setRole('customer'); // Сбрасываем роль на дефолтную
+        }
       }
-    } else {
-      // Логика Регистрации [п.1]
-      const res = registerUser(fullName, email, password);
-      alert(res.message);
-      if (res.success) {
-        setIsLogin(true); // Переключаем на экран входа после успешной регистрации
-        setFullName('');
-        setPassword('');
-      }
+    } catch (err) {
+      setError('Произошла непредвиденная ошибка при связи с сервером.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -46,11 +56,26 @@ function Auth() {
 
           <form onSubmit={handleSubmit}>
             {!isLogin && (
-              <div className="mb-3">
-                <label className="form-label small fw-bold text-muted">Ваше имя</label>
-                <input type="text" className="form-control rounded-3" required value={fullName} onChange={(e) => setFullName(e.target.value)} />
-              </div>
+              <>
+                <div className="mb-3">
+                  <label className="form-label small fw-bold text-muted">Ваше имя</label>
+                  <input type="text" className="form-control rounded-3" required value={fullName} onChange={(e) => setFullName(e.target.value)} />
+                </div>
+
+                {/* 🎭 Выбор роли: Покупатель или Продавец */}
+                <div className="mb-3">
+                  <label className="form-label small fw-bold text-muted d-block">Тип аккаунта</label>
+                  <div className="btn-group w-100" role="group">
+                    <input type="radio" className="btn-check" name="roleRadio" id="customerRadio" checked={role === 'customer'} onChange={() => setRole('customer')} />
+                    <label className="btn btn-outline-primary py-2 small fw-bold" htmlFor="customerRadio">🛍️ Покупатель</label>
+
+                    <input type="radio" className="btn-check" name="roleRadio" id="sellerRadio" checked={role === 'seller'} onChange={() => setRole('seller')} />
+                    <label className="btn btn-outline-primary py-2 small fw-bold" htmlFor="sellerRadio">💼 Продавец</label>
+                  </div>
+                </div>
+              </>
             )}
+            
             <div className="mb-3">
               <label className="form-label small fw-bold text-muted">Email адрес</label>
               <input type="email" className="form-control rounded-3" required value={email} onChange={(e) => setEmail(e.target.value)} />
@@ -60,8 +85,8 @@ function Auth() {
               <input type="password" className="form-control rounded-3" required value={password} onChange={(e) => setPassword(e.target.value)} />
             </div>
             
-            <button type="submit" className="btn btn-primary w-100 py-2 fw-bold mb-3 rounded-3 shadow-sm">
-              {isLogin ? 'Войти' : 'Создать аккаунт'}
+            <button type="submit" disabled={loading} className="btn btn-primary w-100 py-2 fw-bold mb-3 rounded-3 shadow-sm">
+              {loading ? 'Загрузка...' : isLogin ? 'Войти' : 'Создать аккаунт'}
             </button>
             
             <div className="text-center">
