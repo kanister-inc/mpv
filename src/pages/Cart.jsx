@@ -40,7 +40,8 @@ function Cart() {
           {cart.map(item => (
             <div key={item.id} className="row align-items-center g-3 py-3 border-bottom mx-0">
               <div className="col-sm-2 col-3 text-center">
-                <img src={item.img} alt={item.name} className="img-fluid rounded border bg-light p-1" style={{ maxHeight: '70px', objectFit: 'contain' }} />
+                <img src={`${import.meta.env.BASE_URL}${item.img.slice(1)}`} alt={item.name} className="img-fluid rounded border bg-light p-1" style={{ maxHeight: '70px', objectFit: 'contain' }} />
+
               </div>
               <div className="col-sm-6 col-9">
                 <h6 className="fw-bold mb-1">{item.name}</h6>
