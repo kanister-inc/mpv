@@ -61,7 +61,8 @@ function Home() {
               <div className="col" key={product.id}>
                 <div className="card h-100 shadow-sm border-0 d-flex flex-column rounded-3 overflow-hidden">
                   <div className="p-3 bg-light d-flex align-items-center justify-content-center" style={{ height: '200px' }}>
-                    <img src={product.img} className="img-fluid" alt={product.name} style={{ maxHeight: '100%', objectFit: 'contain' }} />
+                    <img src={`${import.meta.env.BASE_URL}${product.img.slice(1)}`} className="img-fluid" alt={product.name} style={{ maxHeight: '100%', objectFit: 'contain' }} />
+
                   </div>
                   <div className="card-body d-flex flex-column p-3">
                     <h5 className="card-title fs-6 mb-1">
