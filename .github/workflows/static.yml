@@ -2,7 +2,7 @@ name: Deploy React App to Pages
 
 on:
   push:
-    branches: ["main"] # Скрипт срабатывает при пуше в ветку main
+    branches: ["main"]
 
 permissions:
   contents: read
@@ -19,9 +19,6 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./mpv-front  # <-- ЗАСТАВЛЯЕМ ГИТХАБ РАБОТАТЬ ВНУТРИ ПАПКИ ФРОНТЕНДА
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,7 +28,6 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
-          cache-dependency-path: './mpv-front/package-lock.json'
 
       - name: Install dependencies
         run: npm install --legacy-peer-deps
@@ -42,8 +38,8 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './mpv-front/dist'  # <-- УКАЗЫВАЕМ ПУТЬ К СОБРАННОЙ ПАПКЕ ВНУТРИ ПОДПАПКИ
-          
+          path: './dist' # Ищем dist прямо в корне
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
