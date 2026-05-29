@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { useData } from './context/DataContext'; // Импортируем контекст [п.11]
 
@@ -16,7 +16,7 @@ function App() {
   const { currentUser, logoutUser } = useData();
 
   return (
-    <Router basename="/mpv">
+    <Router>
       {/* Адаптивная шапка маркетплейса MPV */}
       <nav className="navbar navbar-expand navbar-dark bg-dark mb-4 shadow sticky-top">
         <div className="container px-3">
