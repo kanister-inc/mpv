@@ -16,7 +16,7 @@ function App() {
   const { currentUser, logoutUser } = useData();
 
   return (
-    <Router>
+    <Router basename="/mpv">
       {/* Адаптивная шапка маркетплейса MPV */}
       <nav className="navbar navbar-expand navbar-dark bg-dark mb-4 shadow sticky-top">
         <div className="container px-3">
