@@ -63,6 +63,7 @@ function Auth() {
                 </div>
 
                 {/* 🎭 Выбор роли: Покупатель или Продавец */}
+                                {/* 🎭 Выбор роли: Покупатель, Продавец или Администратор */}
                 <div className="mb-3">
                   <label className="form-label small fw-bold text-muted d-block">Тип аккаунта</label>
                   <div className="btn-group w-100" role="group">
@@ -71,8 +72,12 @@ function Auth() {
 
                     <input type="radio" className="btn-check" name="roleRadio" id="sellerRadio" checked={role === 'seller'} onChange={() => setRole('seller')} />
                     <label className="btn btn-outline-primary py-2 small fw-bold" htmlFor="sellerRadio">💼 Продавец</label>
+
+                    <input type="radio" className="btn-check" name="roleRadio" id="adminRadio" checked={role === 'admin'} onChange={() => setRole('admin')} />
+                    <label className="btn btn-outline-primary py-2 small fw-bold" htmlFor="adminRadio">🛡️ Админ</label>
                   </div>
                 </div>
+
               </>
             )}
             

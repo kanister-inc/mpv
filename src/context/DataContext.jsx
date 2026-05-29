@@ -7,10 +7,29 @@ const API_URL = 'http://localhost:8080';
 export const DataProvider = ({ children }) => {
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
-  const [currentUser, setCurrentUser] = useState(null);
   const [orders, setOrders] = useState([]);
-  const [favorites, setFavorites] = useState([]); // Состояние для списка избранного
+  const [favorites, setFavorites] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // 👤 НОВОЕ: Инициализируем currentUser из localStorage, чтобы сессия не сбрасывалась при F5
+  const [currentUser, setCurrentUser] = useState(() => {
+    const savedId = localStorage.getItem('userId');
+    const savedRole = localStorage.getItem('userRole');
+    const savedName = localStorage.getItem('userName'); // Добавим сохранение имени
+    const savedEmail = localStorage.getItem('userEmail');
+
+    if (savedId && savedRole) {
+      return { id: parseInt(savedId), role: savedRole, name: savedName || 'Администратор', email: savedEmail || '' };
+    }
+    return null;
+  });
+
+  // Загружаем данные профиля и избранного при первой загрузке, если сессия жива
+  useEffect(() => {
+    if (currentUser) {
+      fetchUserFavorites(currentUser.id);
+    }
+  }, []);
 
   // 1. Загрузка товаров с учетом количества на складе и ID продавца
   useEffect(() => {
@@ -89,10 +108,13 @@ export const DataProvider = ({ children }) => {
 
         setCurrentUser(user); 
         
+        // 🔒 Расширяем localStorage, чтобы сессия не сбрасывалась при F5
         localStorage.setItem('userId', String(user.id));
         localStorage.setItem('userRole', user.role);
+        localStorage.setItem('userName', user.name);    // Запоминаем имя для профиля
+        localStorage.setItem('userEmail', user.email);  // Запоминаем почту для профиля
         
-        // 🚀 ПОДТЯГИВАЕМ ЛАЙКИ ИЗ SQLite
+        // Подтягиваем лайки из SQLite базы данных
         fetchUserFavorites(user.id);
         
         return { success: true };

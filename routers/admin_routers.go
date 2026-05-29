@@ -17,4 +17,6 @@ func RegisterAdminRoutes() {
 
 	// 🛠️ ДОБАВЛЯЕМ СЮДА ЭТУ СТРОЧКУ, ЧТОБЫ СВЯЗАТЬ ФРОНТЕНД С БЭКЕНДОМ
 	http.HandleFunc("/api/admin/orders/update", handlers.UpdateOrderStatus)
+	http.HandleFunc("/api/admin/orders/delete", handlers.DeleteOrder)
+
 }

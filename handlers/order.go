@@ -9,14 +9,13 @@ import (
 	"mpv/models"
 )
 
-// CreateOrder — ручка для оформления заказа из корзины фронтенда
+// CreateOrder — оформление заказа из корзины фронтенда
 func CreateOrder(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Метод не поддерживается", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Читаем ID пользователя из заголовков фронтенда
 	userIDStr := r.Header.Get("X-User-Id")
 	if userIDStr == "" {
 		http.Error(w, "Пользователь не авторизован", http.StatusUnauthorized)
@@ -29,7 +28,6 @@ func CreateOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Структура для разбора входящей корзины из React
 	var input struct {
 		Items []struct {
 			ProductID uint    `json:"productId"`
@@ -48,33 +46,28 @@ func CreateOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Открываем транзакцию в базе данных
 	tx := database.DB.Begin()
-
 	var totalPrice float64
 	var orderItems []models.OrderItem
 
-	// Проверяем склад маркетплейса
 	for _, item := range input.Items {
 		var product models.Product
 		if err := tx.First(&product, item.ProductID).Error; err != nil {
 			tx.Rollback()
-			http.Error(w, "Товар не найден в базе данных", http.StatusNotFound)
+			http.Error(w, "Товар не найден", http.StatusNotFound)
 			return
 		}
 
-		// Валидация остатков товара у продавца
 		if product.Stock < item.Qty {
 			tx.Rollback()
 			http.Error(w, "Недостаточно товара на складе: "+product.Name, http.StatusBadRequest)
 			return
 		}
 
-		// Вычитаем купленное количество со склада
 		product.Stock -= item.Qty
 		if err := tx.Save(&product).Error; err != nil {
 			tx.Rollback()
-			http.Error(w, "Ошибка обновления остатков на складе", http.StatusInternalServerError)
+			http.Error(w, "Ошибка обновления остатков", http.StatusInternalServerError)
 			return
 		}
 
@@ -96,7 +89,7 @@ func CreateOrder(w http.ResponseWriter, r *http.Request) {
 
 	if err := tx.Create(&order).Error; err != nil {
 		tx.Rollback()
-		http.Error(w, "Ошибка сохранения заказа в базу данных", http.StatusInternalServerError)
+		http.Error(w, "Ошибка сохранения заказа", http.StatusInternalServerError)
 		return
 	}
 
@@ -107,7 +100,7 @@ func CreateOrder(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(order)
 }
 
-// GetMyOrders — отдает список всех заказов конкретного залогиненного пользователя
+// GetMyOrders — отдает историю заказов текущего пользователя в его профиль
 func GetMyOrders(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Метод не поддерживается", http.StatusMethodNotAllowed)
@@ -127,7 +120,6 @@ func GetMyOrders(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var orders []models.Order
-	// Достаем из SQLite историю покупок текущего юзера вместе с составом
 	err = database.DB.Preload("Items").Where("user_id = ?", userID).Order("id desc").Find(&orders).Error
 	if err != nil {
 		http.Error(w, "Ошибка получения истории заказов", http.StatusInternalServerError)
@@ -138,7 +130,7 @@ func GetMyOrders(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(orders)
 }
 
-// GetAllOrders — отдает список ВЕХ заказов на платформе (только для админа)
+// GetAllOrders — отдает вообще все заказы на маркетплейсе админу
 func GetAllOrders(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Метод не поддерживается", http.StatusMethodNotAllowed)
@@ -147,15 +139,14 @@ func GetAllOrders(w http.ResponseWriter, r *http.Request) {
 
 	userRole := r.Header.Get("X-User-Role")
 	if userRole != "admin" {
-		http.Error(w, "Доступ запрещен. Требуются права администратора", http.StatusForbidden)
+		http.Error(w, "Доступ запрещен", http.StatusForbidden)
 		return
 	}
 
 	var orders []models.Order
-	// Вытаскиваем абсолютно все заказы маркетплейса для вкладки управления
 	err := database.DB.Preload("Items").Order("id desc").Find(&orders).Error
 	if err != nil {
-		http.Error(w, "Ошибка получения списка заказов", http.StatusInternalServerError)
+		http.Error(w, "Ошибка получения заказов", http.StatusInternalServerError)
 		return
 	}
 
@@ -163,21 +154,19 @@ func GetAllOrders(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(orders)
 }
 
-// UpdateOrderStatus — меняет статус заказа (только для админа)
+// UpdateOrderStatus — принудительно меняет статус заказа админом в SQLite базе данных
 func UpdateOrderStatus(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPut {
 		http.Error(w, "Метод не поддерживается", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Защита: проверяем роль из CORS-заголовка фронтенда
 	userRole := r.Header.Get("X-User-Role")
 	if userRole != "admin" {
-		http.Error(w, "Доступ запрещен. Требуются права администратора", http.StatusForbidden)
+		http.Error(w, "Доступ запрещен", http.StatusForbidden)
 		return
 	}
 
-	// Структура для чтения тела запроса
 	var input struct {
 		OrderID uint   `json:"orderId"`
 		Status  string `json:"status"`
@@ -188,21 +177,55 @@ func UpdateOrderStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Ищем заказ в SQLite
-	var order models.Order
-	if err := database.DB.First(&order, input.OrderID).Error; err != nil {
-		http.Error(w, "Заказ не найден", http.StatusNotFound)
+	// Обновляем конкретную ячейку в SQLite по ID заказа
+	result := database.DB.Model(&models.Order{}).Where("id = ?", input.OrderID).Update("status", input.Status)
+	if result.Error != nil {
+		http.Error(w, "Ошибка обновления статуса", http.StatusInternalServerError)
 		return
 	}
 
-	// Обновляем статус
-	order.Status = input.Status
-	if err := database.DB.Save(&order).Error; err != nil {
-		http.Error(w, "Ошибка обновления статуса заказа", http.StatusInternalServerError)
-		return
-	}
-
-	// Возвращаем успешный ответ
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"message": "Статус заказа успешно обновлен!"})
+	json.NewEncoder(w).Encode(map[string]string{"message": "Статус обновлен"})
+}
+
+// DeleteOrder — полностью стирает заказ и его позиции из базы данных SQLite
+func DeleteOrder(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		http.Error(w, "Метод не поддерживается", http.StatusMethodNotAllowed)
+		return
+	}
+
+	userRole := r.Header.Get("X-User-Role")
+	if userRole != "admin" {
+		http.Error(w, "Доступ запрещен", http.StatusForbidden)
+		return
+	}
+
+	orderIDStr := r.URL.Query().Get("id")
+	orderID, err := strconv.Atoi(orderIDStr)
+	if err != nil || orderID <= 0 {
+		http.Error(w, "Некорректный ID заказа", http.StatusBadRequest)
+		return
+	}
+
+	tx := database.DB.Begin()
+
+	// Сначала очищаем позиции товаров внутри чека
+	if err := tx.Where("order_id = ?", orderID).Delete(&models.OrderItem{}).Error; err != nil {
+		tx.Rollback()
+		http.Error(w, "Ошибка удаления позиций заказа", http.StatusInternalServerError)
+		return
+	}
+
+	// Затем стираем сам чек заказа
+	if err := tx.Delete(&models.Order{}, orderID).Error; err != nil {
+		tx.Rollback()
+		http.Error(w, "Ошибка удаления заказа", http.StatusInternalServerError)
+		return
+	}
+
+	tx.Commit()
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"message": "Заказ успешно удален"})
 }
