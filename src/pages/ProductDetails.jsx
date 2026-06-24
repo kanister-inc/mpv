@@ -21,7 +21,7 @@ function ProductDetails() {
 
     const fetchReviews = async () => {
       try {
-        const response = await fetch(`http://localhost:8080/api/reviews?productId=${product.id}`);
+        const response = await fetch(`http://127.0.0.1:8080/api/reviews?productId=${product.id}`);
         if (response.ok) {
           const data = await response.json();
           setReviews(data || []); // Сохраняем отзывы из базы в стейт
@@ -53,7 +53,7 @@ function ProductDetails() {
     if (!comment.trim()) return;
 
     try {
-      const response = await fetch('http://localhost:8080/api/reviews/add', {
+      const response = await fetch('http://127.0.0.1:8080/api/reviews/add', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -90,7 +90,7 @@ function ProductDetails() {
         <div className="row">
           <div className="col-md-5 mb-3">
             <img 
-              src={product.img} 
+              src={product.img.startsWith('http') ? product.img : `/mpv${product.img}`}
               className="img-fluid rounded border bg-light p-3" 
               alt={product.name} 
               style={{ width: '100%', maxHeight: '400px', objectFit: 'contain' }} 
@@ -121,7 +121,7 @@ function ProductDetails() {
               {product.desc}
             </p>
             
-            <div className="mt-4 pt-3 border-top d-flex gap-3 align-items-center">
+            <div className="mt-4 pt-3 border-top d-flex gap-2 align-items-center">
               <button 
                 className={`btn btn-lg px-5 fw-bold ${product.stock > 0 ? 'btn-primary' : 'btn-secondary'}`}
                 onClick={() => addToCart(product.id)}

@@ -17,5 +17,7 @@ func RegisterUserRoutes() {
 	// ⭐ Маршруты для Избранного (Favorites)
 	http.HandleFunc("/api/favorites/toggle", handlers.ToggleFavorite)
 	http.HandleFunc("/api/favorites", handlers.GetUserFavorites)
+	http.HandleFunc("/api/reviews", handlers.GetProductReviews)
+	http.HandleFunc("/api/reviews/add", handlers.AddReview)
 
 }

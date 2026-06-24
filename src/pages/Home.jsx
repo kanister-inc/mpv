@@ -78,7 +78,7 @@ function Home() {
                   {/* Изображение товара */}
                   <div className="p-3 bg-light d-flex align-items-center justify-content-center position-relative" style={{ height: '200px' }}>
                     <img 
-                      src={product.img.startsWith('http') ? product.img : product.img} 
+                      src={product.img.startsWith('http') ? product.img : `/mpv${product.img}`} 
                       className="img-fluid" 
                       alt={product.name} 
                       style={{ maxHeight: '100%', objectFit: 'contain', filter: isOutOfStock ? 'grayscale(60%)' : 'none' }} 

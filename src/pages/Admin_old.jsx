@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useData } from '../context/DataContext';
-import ImageUpload from '../components/ImageUpload';
 
 const API_URL = 'http://127.0.0.1:8080';
 
@@ -306,7 +305,8 @@ function Admin() {
                     </select>
                   </div>
                   <div className="mb-3">
-                    <ImageUpload value={img} onChange={setImg} />
+                    <label className="form-label small fw-bold text-muted">Путь к картинке</label>
+                    <input type="text" className="form-control" placeholder="/images/headphones.jpg" value={img} onChange={(e) => setImg(e.target.value)} />
                   </div>
                   <div className="mb-3">
                     <label className="form-label small fw-bold text-muted">Описание</label>
@@ -356,7 +356,16 @@ function Admin() {
                     </select>
                   </div>
                   <div className="mb-3">
-                    <ImageUpload value={editImg} onChange={setEditImg} />
+                    <label className="form-label small fw-bold text-muted">Путь к картинке</label>
+                    <input type="text" className="form-control" placeholder="/images/headphones.jpg" value={editImg} onChange={(e) => setEditImg(e.target.value)} />
+                    {editImg && (
+                      <img
+                        src={editImg.startsWith('http') ? editImg : `/mpv${editImg}`}
+                        alt="preview"
+                        className="mt-2 rounded border"
+                        style={{ height: '80px', objectFit: 'contain', background: '#f8f9fa' }}
+                      />
+                    )}
                   </div>
                   <div className="mb-3">
                     <label className="form-label small fw-bold text-muted">Описание</label>

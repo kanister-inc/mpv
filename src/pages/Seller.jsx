@@ -1,14 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
 import ImageUpload from '../components/ImageUpload';
 
 const API_URL = 'http://127.0.0.1:8080';
 
-function Admin() {
+function Seller() {
   const { products, createProduct, deleteProduct, currentUser } = useData();
-  const [activeTab, setActiveTab] = useState('products');
 
-  // Состояния для формы добавления товара
+  // Только товары этого продавца
+  const myProducts = products.filter(p => p.sellerId === currentUser?.id);
+
+  // Состояния для добавления товара
   const [showModal, setShowModal] = useState(false);
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
@@ -29,46 +31,6 @@ function Admin() {
   const [editImg, setEditImg] = useState('');
   const [editLoading, setEditLoading] = useState(false);
 
-  // Заказы из бэка
-  const [orders, setOrders] = useState([]);
-  const [searchOrder, setSearchOrder] = useState('');
-
-  // Пользователи из бэка (пока заглушка)
-  const [users] = useState([
-    { id: 1, name: 'Администратор', email: 'admin@mpv.ru', role: 'admin' },
-    { id: 2, name: 'Иван Покупатель', email: 'user@mpv.ru', role: 'customer' },
-  ]);
-
-  // Загрузка заказов при переключении на вкладку
-  useEffect(() => {
-    if (activeTab === 'orders') {
-      fetchOrders();
-    }
-  }, [activeTab]);
-
-  const fetchOrders = async () => {
-    try {
-      const response = await fetch(`${API_URL}/api/admin/orders`, {
-        headers: {
-          'X-User-Id': String(currentUser?.id || ''),
-          'X-User-Role': currentUser?.role || ''
-        }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setOrders(data || []);
-      }
-    } catch (error) {
-      console.error('Ошибка загрузки заказов:', error);
-    }
-  };
-
-  const filteredOrders = orders.filter(order => {
-    const idStr = String(order.ID || order.id || '');
-    return idStr.endsWith(searchOrder) || searchOrder === '';
-  });
-
-  // Открыть модалку редактирования и заполнить поля
   const handleEditOpen = (product) => {
     setEditProduct(product);
     setEditName(product.name);
@@ -80,7 +42,6 @@ function Admin() {
     setEditModal(true);
   };
 
-  // Отправка изменений на бэкенд
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     setEditLoading(true);
@@ -106,10 +67,9 @@ function Admin() {
       if (response.ok) {
         alert('Товар успешно обновлён!');
         setEditModal(false);
-        // Обновляем страницу чтобы подтянуть новые данные
         window.location.reload();
       } else {
-        alert('Ошибка при обновлении товара на сервере.');
+        alert('Ошибка при обновлении товара.');
       }
     } catch (error) {
       alert('Ошибка сети при обновлении товара.');
@@ -118,56 +78,29 @@ function Admin() {
     setEditLoading(false);
   };
 
-  // Удаление товара
   const handleDelete = async (id) => {
-    if (!window.confirm('Вы уверены, что хотите удалить этот товар?')) return;
+    if (!window.confirm('Удалить этот товар?')) return;
     const res = await deleteProduct(id);
     if (res.success) {
-      alert('Товар успешно удален из базы данных!');
+      alert('Товар удалён!');
     } else {
       alert(res.message || 'Ошибка удаления');
     }
   };
 
-  // Изменение статуса заказа
-  const handleStatusChange = async (orderId, newStatus) => {
-    try {
-      const response = await fetch(`${API_URL}/api/admin/orders/update`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-User-Id': String(currentUser?.id || ''),
-          'X-User-Role': currentUser?.role || ''
-        },
-        body: JSON.stringify({ orderId: Number(orderId), status: newStatus })
-      });
-
-      if (response.ok) {
-        setOrders(orders.map(o => (o.ID === orderId || o.id === orderId) ? { ...o, status: newStatus } : o));
-        alert('Статус заказа успешно обновлён!');
-      } else {
-        alert('Не удалось обновить статус на сервере.');
-      }
-    } catch (error) {
-      alert('Ошибка сети: сервер бэкенда недоступен.');
-    }
-  };
-
-  // Добавление нового товара
   const handleSubmitProduct = async (e) => {
     e.preventDefault();
     setLoading(true);
 
-    const productData = {
+    const res = await createProduct({
       name,
       price: parseFloat(price),
       category,
       stock: parseInt(stock),
       desc,
       img: img || '/images/default.jpg'
-    };
+    });
 
-    const res = await createProduct(productData);
     if (res.success) {
       alert(res.message);
       setName(''); setPrice(''); setStock(''); setDesc(''); setImg('');
@@ -180,27 +113,24 @@ function Admin() {
 
   return (
     <div className="container mt-4">
-      <h2 className="mb-4 fw-bold">Панель администратора MPV 🛡️</h2>
+      <h2 className="mb-4 fw-bold">Панель продавца 💼</h2>
+      <p className="text-muted mb-4">Добро пожаловать, <strong>{currentUser?.name}</strong>! Здесь вы управляете своими товарами.</p>
 
-      <div className="btn-group mb-4 w-100 shadow-sm">
-        <button className={`btn py-2 ${activeTab === 'products' ? 'btn-primary' : 'btn-outline-primary'}`} onClick={() => setActiveTab('products')}>📦 Товары</button>
-        <button className={`btn py-2 ${activeTab === 'orders' ? 'btn-primary' : 'btn-outline-primary'}`} onClick={() => setActiveTab('orders')}>📑 Заказы</button>
-        <button className={`btn py-2 ${activeTab === 'users' ? 'btn-primary' : 'btn-outline-primary'}`} onClick={() => setActiveTab('users')}>👥 Пользователи</button>
-      </div>
+      <div className="card p-4 shadow-sm border-0">
+        <div className="d-flex justify-content-between align-items-center mb-3">
+          <h5 className="fw-bold">Мои товары ({myProducts.length})</h5>
+          <button className="btn btn-success btn-sm fw-bold" onClick={() => setShowModal(true)}>+ Добавить товар</button>
+        </div>
 
-      {/* ВКЛАДКА: Товары */}
-      {activeTab === 'products' && (
-        <div className="card p-4 shadow-sm border-0">
-          <div className="d-flex justify-content-between align-items-center mb-3">
-            <h5 className="fw-bold">Список товаров на платформе</h5>
-            <button className="btn btn-success btn-sm fw-bold" onClick={() => setShowModal(true)}>+ Добавить товар</button>
-          </div>
+        {myProducts.length === 0 ? (
+          <p className="text-muted text-center py-4">У вас пока нет товаров. Добавьте первый!</p>
+        ) : (
           <table className="table align-middle">
             <thead>
               <tr><th>Название</th><th>Цена</th><th>Категория</th><th>Остаток</th><th>Действия</th></tr>
             </thead>
             <tbody>
-              {products.map(p => (
+              {myProducts.map(p => (
                 <tr key={p.id}>
                   <td className="fw-bold">{p.name}</td>
                   <td>{p.price.toLocaleString()} ₽</td>
@@ -214,64 +144,8 @@ function Admin() {
               ))}
             </tbody>
           </table>
-        </div>
-      )}
-
-      {/* ВКЛАДКА: Заказы */}
-      {activeTab === 'orders' && (
-        <div className="card p-4 shadow-sm border-0">
-          <div className="mb-4">
-            <label className="form-label fw-bold text-muted small">Поиск заказа (последние 4 знака ID):</label>
-            <input type="text" className="form-control form-control-lg" maxLength="4" placeholder="Например: de4d" value={searchOrder} onChange={(e) => setSearchOrder(e.target.value)} />
-          </div>
-          {orders.length === 0 ? (
-            <p className="text-muted text-center py-4">Заказов пока нет.</p>
-          ) : (
-            <table className="table align-middle">
-              <thead>
-                <tr><th>ID заказа</th><th>Покупатель</th><th>Сумма</th><th>Статус заказа</th></tr>
-              </thead>
-              <tbody>
-                {filteredOrders.map(o => (
-                  <tr key={o.ID || o.id}>
-                    <td><code>...{String(o.ID || o.id).slice(-4)}</code></td>
-                    <td className="fw-bold">{o.user || o.User || `User #${o.user_id || o.UserID}`}</td>
-                    <td>{(o.total || o.Total || 0).toLocaleString()} ₽</td>
-                    <td>
-                      <select className="form-select form-select-sm fw-bold text-primary" value={o.status || o.Status || 'Новый'} onChange={(e) => handleStatusChange(o.ID || o.id, e.target.value)}>
-                        <option>Новый</option>
-                        <option>В обработке</option>
-                        <option>Доставлен</option>
-                      </select>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      )}
-
-      {/* ВКЛАДКА: Пользователи */}
-      {activeTab === 'users' && (
-        <div className="card p-4 shadow-sm border-0">
-          <h5 className="fw-bold mb-3">База пользователей маркетплейса</h5>
-          <table className="table align-middle">
-            <thead>
-              <tr><th>Имя</th><th>Email</th><th>Роль</th></tr>
-            </thead>
-            <tbody>
-              {users.map(u => (
-                <tr key={u.id}>
-                  <td className="fw-bold">{u.name}</td>
-                  <td>{u.email}</td>
-                  <td><span className="badge bg-secondary px-3 py-2">{u.role}</span></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* МОДАЛКА: Добавление товара */}
       {showModal && (
@@ -376,4 +250,4 @@ function Admin() {
   );
 }
 
-export default Admin;
+export default Seller;

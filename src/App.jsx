@@ -4,6 +4,8 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import { useData } from './context/DataContext'; // Импортируем контекст [п.11]
 
 // Импортируем страницы
+import Favorites from './pages/Favorites';
+import Seller from './pages/Seller';
 import Home from './pages/Home';
 import Admin from './pages/Admin';
 import Auth from './pages/Auth';
@@ -25,10 +27,13 @@ function App() {
             <Link className="nav-link px-1 py-2" to="/">Каталог</Link>
             
             {/* Админка видна ТОЛЬКО если вошел админ [п.2,4] */}
-            {currentUser && currentUser.role === 'admin' && (
-              <Link className="nav-link text-warning px-1 py-2 fw-bold" to="/admin">🛡️ Админка</Link>
+            {currentUser && currentUser.role === 'admin' && (<Link className="nav-link text-warning px-1 py-2 fw-bold" to="/admin">🛡️ Админка</Link>
             )}
-            
+            {currentUser && currentUser.role === 'seller' && (<Link className="nav-link text-warning px-1 py-2 fw-bold" to="/seller">💼 Мои товары</Link>
+            )}
+            {currentUser && (
+              <Link className="nav-link px-1 py-2" to="/favorites">❤️ Избранное</Link>
+            )}
             {/* Личный кабинет доступен только авторизованным [п.5] */}
             {currentUser && (
               <Link className="nav-link px-1 py-2" to="/profile">👤 Кабинет</Link>
@@ -56,7 +61,8 @@ function App() {
           <Route path="/product/:id" element={<ProductDetails />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/cart" element={<Cart />} />
-          
+          <Route path="/seller" element={currentUser && currentUser.role === 'seller' ? <Seller /> : <Navigate to="/" />} />
+          <Route path="/favorites" element={<Favorites />} />
           {/* Защита страниц: если не вошел — редирект на авторизацию [п.1] */}
           <Route path="/profile" element={<Profile />} />
 

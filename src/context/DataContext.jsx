@@ -2,7 +2,7 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 
 const DataContext = createContext();
 
-const API_URL = 'http://localhost:8080'; 
+const API_URL = 'http://127.0.0.1:8080'; 
 
 export const DataProvider = ({ children }) => {
   const [products, setProducts] = useState([]);
